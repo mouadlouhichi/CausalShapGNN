@@ -90,8 +90,9 @@ class BipartiteGraphProcessor:
         
         # Symmetric normalization
         rowsum = np.array(adj.sum(1)).flatten()
-        d_inv_sqrt = np.power(rowsum, -0.5)
-        d_inv_sqrt[np.isinf(d_inv_sqrt)] = 0.
+        d_inv_sqrt = np.zeros_like(rowsum, dtype=np.float64)
+        nonzero_mask = rowsum > 0
+        d_inv_sqrt[nonzero_mask] = np.power(rowsum[nonzero_mask], -0.5)
         d_mat_inv_sqrt = sp.diags(d_inv_sqrt)
         
         norm_adj = d_mat_inv_sqrt @ adj @ d_mat_inv_sqrt
