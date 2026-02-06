@@ -1,7 +1,7 @@
 # Gowalla Dataset Configuration
 dataset:
   name: "gowalla"
-  path: "./data/gowalla"
+  path: "./data"  # Just the data directory, not including dataset name
 
 model:
   embed_dim: 64
@@ -13,6 +13,7 @@ training:
   batch_size: 2048
   n_epochs: 1000
   early_stop_patience: 20
+  eval_interval: 5
 
 loss:
   alpha: 0.1

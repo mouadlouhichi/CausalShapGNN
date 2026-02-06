@@ -1,0 +1,22 @@
+# MovieLens-100K Dataset Configuration
+dataset:
+  name: "movielens-100k"
+  path: "./data"
+
+model:
+  embed_dim: 64
+  n_factors: 4
+  n_layers: 3
+
+training:
+  lr: 0.001
+  batch_size: 1024
+  n_epochs: 100
+  early_stop_patience: 20
+  eval_interval: 5
+
+loss:
+  alpha: 0.1
+  beta: 0.1
+  gamma: 0.1
+  delta: 0.1

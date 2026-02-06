@@ -32,12 +32,17 @@ class DataPreprocessor:
         Initialize preprocessor.
         
         Args:
-            data_dir: Root data directory
-            dataset_name: Name of dataset
+            data_dir: Root data directory (e.g., './data')
+            dataset_name: Name of dataset (e.g., 'gowalla')
         """
         self.data_dir = data_dir
         self.dataset_name = dataset_name
-        self.dataset_path = os.path.join(data_dir, dataset_name)
+        
+        # Handle case where data_dir already contains dataset_name
+        if data_dir.endswith(dataset_name):
+            self.dataset_path = data_dir
+        else:
+            self.dataset_path = os.path.join(data_dir, dataset_name)
     
     def load_data(self, val_ratio: float = 0.1) -> GraphData:
         """
@@ -52,7 +57,18 @@ class DataPreprocessor:
         train_file = os.path.join(self.dataset_path, 'train.txt')
         test_file = os.path.join(self.dataset_path, 'test.txt')
         
+        # Debug: print actual paths
+        print(f"Looking for data in: {self.dataset_path}")
+        print(f"  Train file: {train_file} (exists: {os.path.exists(train_file)})")
+        print(f"  Test file: {test_file} (exists: {os.path.exists(test_file)})")
+        
         if not os.path.exists(train_file):
+            # List what's actually in the directory
+            if os.path.exists(self.dataset_path):
+                print(f"  Contents of {self.dataset_path}: {os.listdir(self.dataset_path)}")
+            if os.path.exists(self.data_dir):
+                print(f"  Contents of {self.data_dir}: {os.listdir(self.data_dir)}")
+            
             raise FileNotFoundError(
                 f"Dataset not found at {self.dataset_path}. "
                 f"Please download using: python scripts/download_data.py --dataset {self.dataset_name}"
@@ -63,6 +79,7 @@ class DataPreprocessor:
         n_users = 0
         n_items = 0
         
+        print(f"Loading training data from {train_file}...")
         with open(train_file, 'r') as f:
             for line in f:
                 line = line.strip()
@@ -84,6 +101,7 @@ class DataPreprocessor:
         test_interactions = []
         
         if os.path.exists(test_file):
+            print(f"Loading test data from {test_file}...")
             with open(test_file, 'r') as f:
                 for line in f:
                     line = line.strip()
@@ -109,7 +127,7 @@ class DataPreprocessor:
         val_interactions = train_interactions[:n_val]
         train_interactions = train_interactions[n_val:]
         
-        print(f"Loaded {self.dataset_name}:")
+        print(f"\nLoaded {self.dataset_name}:")
         print(f"  Users: {n_users}")
         print(f"  Items: {n_items}")
         print(f"  Train interactions: {len(train_interactions)}")
