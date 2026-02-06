@@ -1,0 +1,21 @@
+# Yelp2018 Dataset Configuration
+dataset:
+  name: "yelp2018"
+  path: "./data/yelp2018"
+
+model:
+  embed_dim: 64
+  n_factors: 8
+  n_layers: 3
+
+training:
+  lr: 0.001
+  batch_size: 2048
+  n_epochs: 1000
+  early_stop_patience: 20
+
+loss:
+  alpha: 0.1
+  beta: 0.1
+  gamma: 0.1
+  delta: 0.1

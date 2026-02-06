@@ -1,0 +1,21 @@
+# Alibaba-iFashion Dataset Configuration
+dataset:
+  name: "alibaba-ifashion"
+  path: "./data/alibaba-ifashion"
+
+model:
+  embed_dim: 64
+  n_factors: 8
+  n_layers: 3
+
+training:
+  lr: 0.001
+  batch_size: 4096
+  n_epochs: 1000
+  early_stop_patience: 20
+
+loss:
+  alpha: 0.1
+  beta: 0.1
+  gamma: 0.1
+  delta: 0.1
