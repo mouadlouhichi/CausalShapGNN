@@ -79,6 +79,49 @@ class DataDownloader:
         """
         self.data_dir = data_dir
         os.makedirs(data_dir, exist_ok=True)
+        self.url_overrides = self._load_url_overrides()
+
+    def _load_url_overrides(self) -> dict:
+        """
+        Load optional dataset URL overrides from env var.
+        Format: JSON string mapping dataset name -> list of URLs.
+        Example:
+        DATASET_URL_OVERRIDES='{"yelp2018": ["https://.../yelp2018.zip"]}'
+        """
+        raw = os.environ.get('DATASET_URL_OVERRIDES', '').strip()
+        if not raw:
+            return {}
+        try:
+            import json
+            overrides = json.loads(raw)
+            if isinstance(overrides, dict):
+                return overrides
+        except Exception:
+            pass
+        print("Warning: DATASET_URL_OVERRIDES is set but could not be parsed as JSON.")
+        return {}
+
+    def _has_required_files(self, dataset_dir: str, required: list) -> bool:
+        return all(os.path.exists(os.path.join(dataset_dir, f)) for f in required)
+
+    def _get_url_list(self, dataset_key: str) -> list:
+        info = self.DATASETS[dataset_key]
+        urls = []
+        if dataset_key in self.url_overrides:
+            override_urls = self.url_overrides.get(dataset_key)
+            if isinstance(override_urls, list):
+                urls.extend(override_urls)
+        # Backward compatible fields
+        if info.get('url'):
+            urls.append(info['url'])
+        if info.get('alt_url'):
+            urls.append(info['alt_url'])
+        # Remove duplicates, keep order
+        deduped = []
+        for u in urls:
+            if u and u not in deduped:
+                deduped.append(u)
+        return deduped
     
     def download_file(self, url: str, filepath: str, 
                       desc: Optional[str] = None) -> bool:
@@ -130,7 +173,7 @@ class DataDownloader:
         """
         try:
             import gdown
-            gdown.download(id=file_id, output=filepath, quiet=False)
+            gdown.download(id=file_id, output=filepath, quiet=False, fuzzy=True)
             return os.path.exists(filepath)
         except ImportError:
             print("gdown not installed. Install with: pip install gdown")
@@ -183,12 +226,11 @@ class DataDownloader:
         
         # Try primary URL (LightGCN processed data)
         zip_path = os.path.join(dataset_dir, 'gowalla.zip')
-        
-        success = self.download_file(
-            self.DATASETS['gowalla']['alt_url'],
-            zip_path,
-            'Gowalla'
-        )
+        success = False
+        for url in self._get_url_list('gowalla'):
+            success = self.download_file(url, zip_path, 'Gowalla')
+            if success:
+                break
         
         if not success:
             # Try Google Drive
@@ -214,7 +256,10 @@ class DataDownloader:
             print("Downloading raw Gowalla and processing...")
             self._download_and_process_raw_gowalla(dataset_dir)
         
-        print(f"Gowalla dataset ready at {dataset_dir}")
+        if self._has_required_files(dataset_dir, ['train.txt', 'test.txt']):
+            print(f"Gowalla dataset ready at {dataset_dir}")
+        else:
+            print("Gowalla dataset download failed or files are missing.")
         return dataset_dir
     
     def _download_and_process_raw_gowalla(self, dataset_dir: str):
@@ -330,12 +375,11 @@ class DataDownloader:
         print("Downloading Yelp2018 dataset...")
         
         zip_path = os.path.join(dataset_dir, 'yelp2018.zip')
-        
-        success = self.download_file(
-            self.DATASETS['yelp2018']['url'],
-            zip_path,
-            'Yelp2018'
-        )
+        success = False
+        for url in self._get_url_list('yelp2018'):
+            success = self.download_file(url, zip_path, 'Yelp2018')
+            if success:
+                break
         
         if not success:
             print("Trying Google Drive...")
@@ -359,7 +403,11 @@ class DataDownloader:
                         shutil.move(src, dst)
                 shutil.rmtree(subdir, ignore_errors=True)
         
-        print(f"Yelp2018 dataset ready at {dataset_dir}")
+        if self._has_required_files(dataset_dir, ['train.txt', 'test.txt']):
+            print(f"Yelp2018 dataset ready at {dataset_dir}")
+        else:
+            print("Yelp2018 dataset download failed or files are missing.")
+            print("If you have a mirror URL, set DATASET_URL_OVERRIDES env var.")
         return dataset_dir
     
     def download_amazon_book(self) -> str:
@@ -382,12 +430,11 @@ class DataDownloader:
         print("Downloading Amazon-Book dataset...")
         
         zip_path = os.path.join(dataset_dir, 'amazon-book.zip')
-        
-        success = self.download_file(
-            self.DATASETS['amazon-book']['url'],
-            zip_path,
-            'Amazon-Book'
-        )
+        success = False
+        for url in self._get_url_list('amazon-book'):
+            success = self.download_file(url, zip_path, 'Amazon-Book')
+            if success:
+                break
         
         if not success:
             print("Trying Google Drive...")
@@ -411,7 +458,11 @@ class DataDownloader:
                         shutil.move(src, dst)
                 shutil.rmtree(subdir, ignore_errors=True)
         
-        print(f"Amazon-Book dataset ready at {dataset_dir}")
+        if self._has_required_files(dataset_dir, ['train.txt', 'test.txt']):
+            print(f"Amazon-Book dataset ready at {dataset_dir}")
+        else:
+            print("Amazon-Book dataset download failed or files are missing.")
+            print("If you have a mirror URL, set DATASET_URL_OVERRIDES env var.")
         return dataset_dir
     
     def download_alibaba_ifashion(self) -> str:
@@ -434,12 +485,11 @@ class DataDownloader:
         print("Downloading Alibaba-iFashion dataset...")
         
         zip_path = os.path.join(dataset_dir, 'ifashion.zip')
-        
-        success = self.download_file(
-            self.DATASETS['alibaba-ifashion']['url'],
-            zip_path,
-            'Alibaba-iFashion'
-        )
+        success = False
+        for url in self._get_url_list('alibaba-ifashion'):
+            success = self.download_file(url, zip_path, 'Alibaba-iFashion')
+            if success:
+                break
         
         if not success:
             print("Trying Google Drive...")
@@ -456,7 +506,11 @@ class DataDownloader:
             # Process iFashion format if needed
             self._process_ifashion(dataset_dir)
         
-        print(f"Alibaba-iFashion dataset ready at {dataset_dir}")
+        if self._has_required_files(dataset_dir, ['train.txt', 'test.txt']):
+            print(f"Alibaba-iFashion dataset ready at {dataset_dir}")
+        else:
+            print("Alibaba-iFashion dataset download failed or files are missing.")
+            print("If you have a mirror URL, set DATASET_URL_OVERRIDES env var.")
         return dataset_dir
     
     def _process_ifashion(self, dataset_dir: str):
