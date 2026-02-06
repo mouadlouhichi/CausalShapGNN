@@ -19,6 +19,7 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
+  python scripts/download_data.py --dataset movielens-100k
   python scripts/download_data.py --dataset gowalla
   python scripts/download_data.py --dataset all
   python scripts/download_data.py --list
@@ -28,10 +29,9 @@ Examples:
     parser.add_argument(
         '--dataset', 
         type=str, 
-        default='all',
-        choices=['gowalla', 'yelp2018', 'amazon-book', 'alibaba-ifashion',
-                 'movielens-10m', 'movielens-1m', 'movielens-100k', 'all'],
-        help='Dataset to download'
+        default='movielens-100k',
+        help='Dataset to download (gowalla, yelp2018, amazon-book, '
+             'movielens-1m, movielens-100k, or all)'
     )
     
     parser.add_argument(
@@ -56,13 +56,16 @@ Examples:
     else:
         print(f"\n{'='*60}")
         print("CausalShapGNN Dataset Downloader")
-        print(f"{'='*60}\n")
+        print(f"{'='*60}")
         
-        downloader.download(args.dataset)
-        
-        print(f"\n{'='*60}")
-        print("Download Complete!")
-        print(f"{'='*60}\n")
+        try:
+            downloader.download(args.dataset)
+            print(f"\n{'='*60}")
+            print("Download Complete!")
+            print(f"{'='*60}\n")
+        except Exception as e:
+            print(f"\nError: {e}")
+            sys.exit(1)
         
         downloader.list_datasets()
 

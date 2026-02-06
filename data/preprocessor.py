@@ -2,9 +2,8 @@
 Data Preprocessor for CausalShapGNN
 """
 
+import os
 import numpy as np
-import scipy.sparse as sp
-import torch
 from collections import defaultdict
 from typing import List, Tuple, Dict, Optional
 from dataclasses import dataclass
@@ -19,8 +18,8 @@ class GraphData:
     train_interactions: List[Tuple[int, int]]
     val_interactions: List[Tuple[int, int]]
     test_interactions: List[Tuple[int, int]]
-    user_features: Optional[torch.Tensor] = None
-    item_features: Optional[torch.Tensor] = None
+    user_features: Optional[np.ndarray] = None
+    item_features: Optional[np.ndarray] = None
 
 
 class DataPreprocessor:
@@ -38,7 +37,7 @@ class DataPreprocessor:
         """
         self.data_dir = data_dir
         self.dataset_name = dataset_name
-        self.dataset_path = f"{data_dir}/{dataset_name}"
+        self.dataset_path = os.path.join(data_dir, dataset_name)
     
     def load_data(self, val_ratio: float = 0.1) -> GraphData:
         """
@@ -50,8 +49,6 @@ class DataPreprocessor:
         Returns:
             GraphData object containing all data
         """
-        import os
-        
         train_file = os.path.join(self.dataset_path, 'train.txt')
         test_file = os.path.join(self.dataset_path, 'test.txt')
         
@@ -68,7 +65,10 @@ class DataPreprocessor:
         
         with open(train_file, 'r') as f:
             for line in f:
-                parts = line.strip().split()
+                line = line.strip()
+                if not line:
+                    continue
+                parts = line.split()
                 if len(parts) > 1:
                     user = int(parts[0])
                     items = [int(i) for i in parts[1:]]
@@ -77,7 +77,8 @@ class DataPreprocessor:
                         train_interactions.append((user, item))
                     
                     n_users = max(n_users, user + 1)
-                    n_items = max(n_items, max(items) + 1)
+                    if items:
+                        n_items = max(n_items, max(items) + 1)
         
         # Load test data
         test_interactions = []
@@ -85,7 +86,10 @@ class DataPreprocessor:
         if os.path.exists(test_file):
             with open(test_file, 'r') as f:
                 for line in f:
-                    parts = line.strip().split()
+                    line = line.strip()
+                    if not line:
+                        continue
+                    parts = line.split()
                     if len(parts) > 1:
                         user = int(parts[0])
                         items = [int(i) for i in parts[1:]]
@@ -94,7 +98,8 @@ class DataPreprocessor:
                             test_interactions.append((user, item))
                         
                         n_users = max(n_users, user + 1)
-                        n_items = max(n_items, max(items) + 1)
+                        if items:
+                            n_items = max(n_items, max(items) + 1)
         
         # Split training into train/val
         random.seed(42)
@@ -120,18 +125,25 @@ class DataPreprocessor:
         )
     
     def compute_statistics(self, graph_data: GraphData) -> Dict:
-        """Compute dataset statistics"""
+        """
+        Compute dataset statistics.
         
+        Args:
+            graph_data: GraphData object
+            
+        Returns:
+            Dictionary of statistics
+        """
         # User degree distribution
-        user_degrees = defaultdict(int)
-        item_degrees = defaultdict(int)
+        user_degrees: Dict[int, int] = defaultdict(int)
+        item_degrees: Dict[int, int] = defaultdict(int)
         
         for u, i in graph_data.train_interactions:
             user_degrees[u] += 1
             item_degrees[i] += 1
         
-        user_deg_vals = list(user_degrees.values())
-        item_deg_vals = list(item_degrees.values())
+        user_deg_vals = list(user_degrees.values()) if user_degrees else [0]
+        item_deg_vals = list(item_degrees.values()) if item_degrees else [0]
         
         stats = {
             'n_users': graph_data.n_users,
@@ -139,7 +151,7 @@ class DataPreprocessor:
             'n_train': len(graph_data.train_interactions),
             'n_val': len(graph_data.val_interactions),
             'n_test': len(graph_data.test_interactions),
-            'density': len(graph_data.train_interactions) / (graph_data.n_users * graph_data.n_items),
+            'density': len(graph_data.train_interactions) / (graph_data.n_users * graph_data.n_items + 1e-10),
             'avg_user_degree': np.mean(user_deg_vals),
             'avg_item_degree': np.mean(item_deg_vals),
             'user_degree_std': np.std(user_deg_vals),
@@ -151,7 +163,10 @@ class DataPreprocessor:
         # Compute Gini coefficient for popularity bias
         sorted_items = sorted(item_deg_vals)
         n = len(sorted_items)
-        index = np.arange(1, n + 1)
-        stats['item_gini'] = (2 * np.sum(index * sorted_items) - (n + 1) * np.sum(sorted_items)) / (n * np.sum(sorted_items))
+        if n > 0 and sum(sorted_items) > 0:
+            index = np.arange(1, n + 1)
+            stats['item_gini'] = (2 * np.sum(index * sorted_items) - (n + 1) * np.sum(sorted_items)) / (n * np.sum(sorted_items))
+        else:
+            stats['item_gini'] = 0.0
         
         return stats
