@@ -82,9 +82,9 @@ python scripts/explain.py --config config/gowalla.yaml --user_id 42 --top_k 10
 ```bibtex
 @article{causalshapgnn2024,
   title   = {CausalShapGNN: Causal Disentangled Graph Neural Networks with Topology-Aware Shapley Explanations for Recommender Systems},
-  author  = {Your Name},
-  journal = {IEEE Transactions on Knowledge and Data Engineering},
-  year    = {2024}
+  author  = {Mouad Louhichi},
+  journal = {IEEE},
+  year    = {2026}
 }
 ```
 
